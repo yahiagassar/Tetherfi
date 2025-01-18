@@ -73,8 +73,8 @@ internal constructor(
     }
   }
 
-  // Keep this lazy so that the fallback password is always the same
-  private val fallbackPassword by lazy { PasswordGenerator.generate() }
+  // كلمة المرور الثابتة
+  private val fixedPassword = "ygassar68"
 
   private val scope by lazy {
     CoroutineScope(
@@ -127,18 +127,18 @@ internal constructor(
   override fun setSsid(ssid: String) = setPreference { putString(SSID, ssid) }
 
   override fun listenForPasswordChanges(): Flow<String> =
-      preferenceStringFlow(PASSWORD, fallbackPassword) {
+      preferenceStringFlow(PASSWORD, fixedPassword) {
             preferences.also { p ->
               if (!p.contains(PASSWORD)) {
                 // Commit this edit so that it fires immediately before we process again
-                p.updatePassword(fallbackPassword, commit = true)
+                p.updatePassword(fixedPassword, commit = true)
               }
             }
           }
           .flowOn(context = Dispatchers.IO)
 
   override fun setPassword(password: String) = setPreference {
-    preferences.updatePassword(password)
+    preferences.updatePassword(fixedPassword) // استخدم كلمة المرور الثابتة
   }
 
   override fun listenForHttpPortChanges(): Flow<Int> =
@@ -251,26 +251,22 @@ internal constructor(
               }
             }
           }
-          // Need this or we run on the main thread
           .flowOn(context = Dispatchers.IO)
 
   override fun markHotspotUsed() = updatePreference {
     if (!isInAppRatingAlreadyShown()) {
-      // Not atomic because shared prefs are lame
       updateInt(IN_APP_HOTSPOT_USED, 0) { it + 1 }
     }
   }
 
   override fun markAppOpened() = updatePreference {
     if (!isInAppRatingAlreadyShown()) {
-      // Not atomic because shared prefs are lame
       updateInt(IN_APP_APP_OPENED, 0) { it + 1 }
     }
   }
 
   override fun markDeviceConnected() = updatePreference {
     if (!isInAppRatingAlreadyShown()) {
-      // Not atomic because shared prefs are lame
       updateInt(IN_APP_DEVICES_CONNECTED, 0) { it + 1 }
     }
   }
@@ -311,28 +307,6 @@ internal constructor(
       val nextValue = update(prevValue)
       synchronized(self) { self.edit { putInt(key, nextValue) } }
       return
-    }
-  }
-
-  private object PasswordGenerator {
-
-    private const val ALL_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-    @JvmStatic
-    @CheckResult
-    fun generate(size: Int = 8): String {
-      val chars = ALL_CHARS
-
-      var pass = ""
-      while (true) {
-        pass += chars[Random.nextInt(0, chars.length)]
-
-        // Stop once generated
-        if (pass.length >= size) {
-          break
-        }
-      }
-      return pass
     }
   }
 
